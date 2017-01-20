@@ -67,7 +67,7 @@ public class MenuScreen extends State {
 
         Copyright=new Image(Polynomial.skin.getDrawable("Copyright"));
         Copyright.setScale(0.58f);
-        Copyright.setPosition(0,upY((int) (Copyright.getHeight()*0.85)));
+        Copyright.setPosition((int) (Polynomial.WIDTH-Copyright.getWidth()*0.58),upY((int) (Copyright.getHeight()*0.85)));
         addActor(Copyright);
 
         layout.setText(sofiaProSoftMedium46px, TwojWielomian.getText());
@@ -211,7 +211,7 @@ public class MenuScreen extends State {
             }
             if((x-miejsca.getX()-miejsca.getWidth()/2)*(x-miejsca.getX()-miejsca.getWidth()/2) + (y-upY((int)miejsca.getY())+miejsca.getHeight()/2)*(y-upY((int)miejsca.getY())+miejsca.getHeight()/2) < miejsca.getWidth()/2*miejsca.getWidth()/2) {
 
-                 startEndAnimationAndPushNewState(new MiejscaZerowe(gsm));
+                 startEndAnimationAndPushNewState(new DomainScreen(gsm));
             }
             if((x-wykres.getX()-wykres.getWidth()/2)*(x-wykres.getX()-wykres.getWidth()/2) + (y-upY((int)wykres.getY())+wykres.getHeight()/2)*(y-upY((int)wykres.getY())+wykres.getHeight()/2) < wykres.getWidth()/2*wykres.getWidth()/2) {
                 startEndAnimationAndPushNewState(new Graph(gsm));
