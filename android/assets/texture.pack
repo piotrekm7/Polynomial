@@ -66,3 +66,24 @@ miejsca
   orig: 190, 120
   offset: 0, 0
   index: -1
+Copyright
+  rotate: false
+  xy: 1215, 75
+  size: 245, 90
+  orig: 245, 90
+  offset: 0, 0
+  index: -1
+real
+  rotate: false
+  xy: 1280, 690
+  size: 190, 120
+  orig: 190, 120
+  offset: 0, 0
+  index: -1
+complex
+  rotate: false
+  xy: 1280, 560
+  size: 190, 120
+  orig: 190, 120
+  offset: 0, 0
+  index: -1
