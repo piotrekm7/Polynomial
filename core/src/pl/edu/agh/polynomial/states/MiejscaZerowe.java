@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 
-
 import pl.edu.agh.polynomial.Polynomial;
 
 import static pl.edu.agh.polynomial.Polynomial.skin;
@@ -18,15 +17,61 @@ import static pl.edu.agh.polynomial.Polynomial.skin;
  */
 
 public class MiejscaZerowe extends State {
-    private Complex poly[];
-    private Image bg;
     private static Complex roots[];
     private static Complex droots[];
-    private Label showRoots[] , title;
+    private Image bg;
+    private Label showRoots[], title;
     private BitmapFont sofiaProSoftMedium34px = new BitmapFont(Gdx.files.internal("SofiaProSoftMedium34px.fnt"));
     private BitmapFont sofiaProSoftMedium46px = new BitmapFont(Gdx.files.internal("SofiaProSoftMedium46px.fnt"));
     private Image wstecz;
     private Image Copyright;
+
+    public MiejscaZerowe(GameStateManager gsm, final int domain) {
+        super(gsm);
+        bg = new Image(skin.getDrawable("bg"));
+        addActor(bg);
+
+        Copyright = new Image(Polynomial.skin.getDrawable("Copyright"));
+        Copyright.setScale(0.58f);
+        Copyright.setPosition((int) (Polynomial.WIDTH - Copyright.getWidth() * 0.58), upY((int) (Copyright.getHeight() * 0.85)));
+        addActor(Copyright);
+
+        licz();
+        Gdx.input.setInputProcessor(this);
+        title = new Label("Miejsca zerowe", new Label.LabelStyle(sofiaProSoftMedium46px, Color.BLACK));
+        title.setPosition(Polynomial.WIDTH / 2 - title.getWidth() / 2, upY(60));
+        addActor(title);
+        showRoots = new Label[roots.length];
+        int z = 0;
+        if (domain == 1) z = 1;
+        for (int i = 0; i < showRoots.length; i++) {
+            if (domain == 1) {
+                if (Math.round(MiejscaZerowe.getRoots()[i].getImaginary() * 100.0) / 100.0 != 0) {
+                    showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0 + " +  " + Math.round(MiejscaZerowe.getRoots()[i].getImaginary() * 100.0) / 100.0 + "i", new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
+                } else
+                    showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0, new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
+
+                showRoots[i].setPosition(30 + 350 * (i / 8), upY(120 + (i % 8) * 39));
+                addActor(showRoots[i]);
+            } else {
+                if (Math.round(MiejscaZerowe.getRoots()[i].getImaginary() * 100.0) / 100.0 == 0) {
+                    showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0, new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
+                    showRoots[i].setPosition(30 + 350 * (z / 8), upY(120 + (z % 8) * 39));
+                    addActor(showRoots[i]);
+                    z++;
+                }
+            }
+        }
+        if (z == 0) {
+            showRoots[0] = new Label("Brak rzeczywistych miejsc zerowych", new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
+            showRoots[0].setPosition(30, upY(120));
+            addActor(showRoots[0]);
+        }
+
+        wstecz = new Image(Polynomial.skin.getDrawable("wstecz"));
+        wstecz.setPosition(0, 0);
+        addActor(wstecz);
+    }
 
     public static Complex[] getRoots() {
         return roots;
@@ -34,6 +79,92 @@ public class MiejscaZerowe extends State {
 
     public static Complex[] getDroots() { // pierwiastki pochodnej
         return droots;
+    }
+
+    public static void licz() {
+        double poly[] = new double[MainScreen.getDane().length];
+        int t = 0;
+        for (Double d : MainScreen.getDane()) {
+            poly[t++] = d;
+        }
+        roots = new Complex[poly.length - 1];
+        roots = findRoots(poly);
+        droots = new Complex[poly.length - 2];
+        droots = findRoots(countDerive(poly));
+    }
+
+    private static double[] countDerive(double poly[]) {
+        double derive[] = new double[poly.length - 1];
+        for (int i = 0; i < derive.length; i++) {
+            derive[i] = poly[i] * (derive.length - i);
+        }
+        return derive;
+    }
+
+    public static Complex[] findRoots(double[] coeffs) {
+        PolynomialSolver polynomialSolver = new PolynomialSolver();
+        return polynomialSolver.rpoly(coeffs);
+    }
+
+    private static void quadsd(int n, double u, double v, double p[], double[] q, double[] rem) {
+        double b = p[1];
+        q[1] = b;
+        double a = p[2] - u * b;
+        q[2] = a;
+        for (int i = 3; i <= n; i++) {
+            double c = p[i] - u * a - v * b;
+            q[i] = c;
+            b = a;
+            a = c;
+        }
+        rem[0] = a;
+        rem[1] = b;
+    }
+
+    private static Complex[] quad(double a, double b, double c) {
+        if (a == 0 && b == 0) {
+            return new Complex[]{new Complex(0), new Complex(0)};
+        }
+        if (a == 0) {
+            return new Complex[]{new Complex(-c / b), new Complex(0)};
+        }
+        if (c == 0) {
+            return new Complex[]{new Complex(0), new Complex(-b / a)};
+        }
+        double b2 = b / 2;
+        double e, d;
+        if (Math.abs(b2) < Math.abs(c)) {
+            double e1 = (c >= 0) ? a : -a;
+            e = b2 * (b2 / Math.abs(c)) - e1;
+            d = Math.sqrt(Math.abs(e)) * Math.sqrt(Math.abs(c));
+        } else {
+            e = 1 - (a / b2) * (c / b2);
+            d = Math.sqrt(Math.abs(e)) * Math.abs(b2);
+        }
+        if (e >= 0) {
+            double d2 = (b2 >= 0) ? -d : d;
+            double lr = (-b2 + d2) / a;
+            double sr = (lr != 0) ? c / lr / a : 0;
+            return new Complex[]{new Complex(sr), new Complex(lr)};
+        } else {
+            Complex z1 = new Complex(-b2 / a, Math.abs(d / a));
+            return new Complex[]{z1, new Complex(z1.getReal(), -z1.getImaginary())};
+        }
+    }
+
+    @Override
+    public void handleInput(float x, float y) {
+        if ((x - wstecz.getX() - wstecz.getWidth() / 2) * (x - wstecz.getX() - wstecz.getWidth() / 2) + (y - upY((int) wstecz.getY()) + wstecz.getHeight() / 2) * (y - upY((int) wstecz.getY()) + wstecz.getHeight() / 2) < wstecz.getWidth() / 2 * wstecz.getWidth() / 2) {
+            gsm.pop();
+            gsm.peek().startEndAnimationAndPopState();
+        }
+    }
+
+    @Override
+    public void render(SpriteBatch sb) {
+        act();
+        draw();
+        drawShadow();
     }
 
     public static class Complex {
@@ -50,11 +181,6 @@ public class MiejscaZerowe extends State {
             imaginary = 0;
         }
 
-        public Complex(Complex a) {
-            real = a.getReal();
-            imaginary = a.getImaginary();
-        }
-
         public double getReal() {
             return real;
         }
@@ -63,176 +189,10 @@ public class MiejscaZerowe extends State {
             return imaginary;
         }
 
-        public Complex multiplication(Complex b) {
-            Complex a = new Complex(real * b.getReal() - imaginary * b.getImaginary(), real * b.getImaginary() + imaginary * b.getReal());
-            return a;
-        }
-
-        public Complex multiplication(double b) {
-            Complex a = new Complex(real * b, imaginary * b);
-            return a;
-        }
-
-        public Complex power(int b) {
-            if (b == 0) {
-                return new Complex(1);
-            }
-            Complex a = new Complex(this);
-            for (int i = 0; i < b - 1; i++) {
-                a = a.multiplication(this);
-            }
-            return a;
-        }
-
-        public Complex plus(Complex b) {
-            Complex a = new Complex(real + b.getReal(), imaginary + b.getImaginary());
-            return a;
-        }
-
-        public Complex minus(Complex b) {
-            Complex a = new Complex(real - b.getReal(), imaginary - b.getImaginary());
-            return a;
-        }
-
-        public double abs() {
-            return Math.sqrt(real * real + imaginary * imaginary);
-        }
-
-        public double arg() {
-            double argument;
-            if (real > 0) {
-                argument = Math.atan(imaginary / real);
-            } else {
-                if (real < 0) {
-                    argument = Math.atan(imaginary / real) + Math.PI;
-                } else {
-                    if (imaginary > 0) {
-                        argument = Math.PI / 2;
-                    } else {
-                        argument = -Math.PI / 2;
-                    }
-                }
-            }
-            if (argument < 0) {
-                argument += 2 * Math.PI;
-            }
-            return argument;
-        }
-
-        public Complex sqrt() {
-            if (real == 0 && imaginary == 0) {
-                return new Complex(0);
-            }
-            return new Complex(abs() / 2 * Math.cos(arg() / 2), abs() / 2 * Math.sin(arg() / 2));
-        }
-
-        public Complex sprzezenie() {
-            return new Complex(real, -imaginary);
-        }
-
-        public Complex divide(Complex b) {
-            return multiplication(b.sprzezenie()).multiplication(1 / (b.abs() * b.abs()));
-        }
-
         @Override
         public String toString() {
             return "" + real + " + " + imaginary + "i";
         }
-    }
-
-    public static void licz(){
-        double poly[] = new double[MainScreen.getDane().length];
-        int t = 0;
-        for (Double d : MainScreen.getDane()) {
-            poly[t++] = d;
-        }
-
-        roots = new Complex[poly.length-1];
-        roots = findRoots(poly);
-
-
-        droots = new Complex[poly.length-2];
-        droots = findRoots(countDerive(poly));
-    }
-
-    public MiejscaZerowe(GameStateManager gsm, final int domain) {
-        super(gsm);
-        bg = new Image(skin.getDrawable("bg"));
-        addActor(bg);
-
-        Copyright=new Image(Polynomial.skin.getDrawable("Copyright"));
-        Copyright.setScale(0.58f);
-        Copyright.setPosition((int) (Polynomial.WIDTH-Copyright.getWidth()*0.58),upY((int) (Copyright.getHeight()*0.85)));
-        addActor(Copyright);
-
-
-        licz();
-        Gdx.input.setInputProcessor(this);
-        startEnterAnimation();
-        title = new Label("Miejsca zerowe" , new Label.LabelStyle(sofiaProSoftMedium46px , Color.BLACK));
-        title.setPosition(Polynomial.WIDTH/2 -title.getWidth()/2, upY(60));
-        addActor(title);
-        showRoots = new Label[roots.length];
-        int z=0;
-        if(domain==1) z=1;
-        for(int i=0 ; i<showRoots.length ; i++){
-            if(domain==1){
-                if(Math.round(MiejscaZerowe.getRoots()[i].getImaginary()*100.0)/100.0!=0) {
-                    showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0 + " +  " + Math.round(MiejscaZerowe.getRoots()[i].getImaginary() * 100.0) / 100.0 + "i", new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
-                }
-                else showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0, new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
-
-                showRoots[i].setPosition(30+350*(i/8) , upY(120+(i%8)*39));
-                addActor(showRoots[i]);
-            }
-            else{
-                if(Math.round(MiejscaZerowe.getRoots()[i].getImaginary()*100.0)/100.0==0) {
-                    showRoots[i] = new Label("" + Math.round(MiejscaZerowe.getRoots()[i].getReal() * 100.0) / 100.0, new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
-                    showRoots[i].setPosition(30+350*(z/8) , upY(120+(z%8)*39));
-                    addActor(showRoots[i]);
-                    z++;
-                }
-
-            }
-
-        }
-        if(z==0) {
-            showRoots[0] = new Label("Brak rzeczywistych miejsc zerowych", new Label.LabelStyle(sofiaProSoftMedium34px, Color.BLACK));
-            showRoots[0].setPosition(30 , upY(120));
-            addActor(showRoots[0]);
-        }
-
-        wstecz=new Image(Polynomial.skin.getDrawable("wstecz"));
-        wstecz.setPosition(0,0);
-        addActor(wstecz);
-    }
-
-    private static double[] countDerive(double poly[]) {
-        double derive[] = new double[poly.length - 1];
-        for (int i = 0; i < derive.length; i++) {
-            derive[i] = poly[i]*(derive.length - i);
-        }
-        return derive;
-    }
-
-    @Override
-    public void handleInput(float x, float y) {
-        if((x-wstecz.getX()-wstecz.getWidth()/2)*(x-wstecz.getX()-wstecz.getWidth()/2) + (y-upY((int)wstecz.getY())+wstecz.getHeight()/2)*(y-upY((int)wstecz.getY())+wstecz.getHeight()/2) < wstecz.getWidth()/2*wstecz.getWidth()/2) {
-
-            startEndAnimationAndPopState();
-            startEndAnimationAndPopState();
-        }
-    }
-
-    @Override
-    public void render(SpriteBatch sb) {
-        act();
-        draw();
-    }
-
-    public static Complex[] findRoots(double[] coeffs) {
-        PolynomialSolver polynomialSolver = new PolynomialSolver();
-        return polynomialSolver.rpoly(coeffs);
     }
 
     private static class PolynomialSolver {
@@ -523,6 +483,7 @@ public class MiejscaZerowe extends State {
             }
             return 0;
         }
+
         private int quadit(double uu, double vv) {
             boolean tried = false;
             double omp = 0;
@@ -590,18 +551,6 @@ public class MiejscaZerowe extends State {
                 relstp = Math.abs((vi - v) / vi);
                 u = ui;
                 v = vi;
-            }
-        }
-
-        private class RealitOut {
-            double sss;
-            int nz;
-            boolean iflag;
-
-            RealitOut(double sss, int nz, boolean iflag) {
-                this.sss = sss;
-                this.nz = nz;
-                this.iflag = iflag;
             }
         }
 
@@ -682,8 +631,7 @@ public class MiejscaZerowe extends State {
                 a1 = b - a * (d / c);
                 a7 = a + g * d + h * f;
                 return 1;
-            }
-            else {
+            } else {
                 e = a / d;
                 f = c / d;
                 g = u * b;
@@ -749,52 +697,18 @@ public class MiejscaZerowe extends State {
             return new double[]{uu, vv};
         }
 
-    }
+        private class RealitOut {
+            double sss;
+            int nz;
+            boolean iflag;
 
-    private static void quadsd(int n, double u, double v, double p[], double[] q, double[] rem) {
-        double b = p[1];
-        q[1] = b;
-        double a = p[2] - u * b;
-        q[2] = a;
-        for (int i = 3; i <= n; i++) {
-            double c = p[i] - u * a - v * b;
-            q[i] = c;
-            b = a;
-            a = c;
+            RealitOut(double sss, int nz, boolean iflag) {
+                this.sss = sss;
+                this.nz = nz;
+                this.iflag = iflag;
+            }
         }
-        rem[0] = a;
-        rem[1] = b;
-    }
 
-    private static Complex[] quad(double a, double b, double c) {
-        if (a == 0 && b == 0) {
-            return new Complex[]{new Complex(0), new Complex(0)};
-        }
-        if (a == 0) {
-            return new Complex[]{new Complex(-c / b), new Complex(0)};
-        }
-        if (c == 0) {
-            return new Complex[]{new Complex(0), new Complex(-b / a)};
-        }
-        double b2 = b / 2;
-        double e, d;
-        if (Math.abs(b2) < Math.abs(c)) {
-            double e1 = (c >= 0) ? a : -a;
-            e = b2 * (b2 / Math.abs(c)) - e1;
-            d = Math.sqrt(Math.abs(e)) * Math.sqrt(Math.abs(c));
-        } else {
-            e = 1 - (a / b2) * (c / b2);
-            d = Math.sqrt(Math.abs(e)) * Math.abs(b2);
-        }
-        if (e >= 0) {
-            double d2 = (b2 >= 0) ? -d : d;
-            double lr = (-b2 + d2) / a;
-            double sr = (lr != 0) ? c / lr / a : 0;
-            return new Complex[]{new Complex(sr), new Complex(lr)};
-        } else {
-            Complex z1 = new Complex(-b2 / a, Math.abs(d / a));
-            return new Complex[]{z1, new Complex(z1.getReal(), -z1.getImaginary())};
-        }
     }
 
 }
